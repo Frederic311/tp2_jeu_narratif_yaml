@@ -1,5 +1,6 @@
 use crate::commands::{
-    ChooseCommand, GameCommand, InventoryCommand, LookCommand, QuitCommand, StatusCommand,
+    ChooseCommand, GameCommand, HelpCommand, InventoryCommand, LookCommand, QuitCommand,
+    StatusCommand,
 };
 use crate::errors::ParseError;
 
@@ -16,6 +17,7 @@ pub fn parse_command(line: &str) -> Result<Box<dyn GameCommand>, ParseError> {
         "look" => Ok(Box::new(LookCommand)),
         "inventory" => Ok(Box::new(InventoryCommand)),
         "status" => Ok(Box::new(StatusCommand)),
+        "help" => Ok(Box::new(HelpCommand)),
         "quit" => Ok(Box::new(QuitCommand)),
         "choose" => {
             let value = parts.next().ok_or(ParseError::MissingArgument(cmd))?;

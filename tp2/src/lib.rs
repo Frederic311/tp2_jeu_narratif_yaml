@@ -6,31 +6,34 @@ mod scenario;
 mod state;
 
 use crate::engine::{CommandOutcome, enter_scene, render_scene};
-use crate::errors::{GameError, ParseError};
+use crate::errors::{AppError, GameError, ParseError};
 use crate::parser::parse_command;
 use crate::scenario::Scenario;
 use crate::state::GameState;
 use std::io::{self, Write};
 
-pub fn run_game(story_path: &str) -> Result<(), String> {
-    let scenario = Scenario::load_from_file(story_path)
-        .map_err(|e| format!("Failed to load scenario: {e}"))?;
-    scenario
-        .validate()
-        .map_err(|e| format!("Scenario validation error: {e}"))?;
+pub fn run_game(story_path: &str) -> Result<(), AppError> {
+    let scenario = Scenario::load_from_file(story_path)?;
+    scenario.validate().map_err(AppError::Validation)?;
 
     let mut state = GameState::new(scenario.start_scene.clone(), scenario.initial_hp);
 
-    enter_scene(&scenario, &mut state).map_err(|e| format!("{e}"))?;
+    enter_scene(&scenario, &mut state).map_err(|e| AppError::Io(e.to_string()))?;
     render_scene(&scenario, &state);
 
     let stdin = io::stdin();
     loop {
         print!("> ");
-        io::stdout().flush().map_err(|e| e.to_string())?;
+        io::stdout()
+            .flush()
+            .map_err(|e| AppError::Io(e.to_string()))?;
 
         let mut line = String::new();
-        if stdin.read_line(&mut line).map_err(|e| e.to_string())? == 0 {
+        if stdin
+            .read_line(&mut line)
+            .map_err(|e| AppError::Io(e.to_string()))?
+            == 0
+        {
             break;
         }
 
@@ -76,7 +79,7 @@ fn print_parse_error(err: ParseError) {
 mod tests {
     use super::*;
     use crate::commands::{ChooseCommand, GameCommand};
-    use crate::engine::CommandOutcome;
+    use crate::engine::{CommandOutcome, format_scene};
     use crate::errors::GameError;
     use crate::scenario::Scenario;
 
@@ -155,5 +158,60 @@ scenes:
             err,
             crate::errors::ValidationError::StartSceneMissing(_)
         ));
+    }
+
+    #[test]
+    fn validation_duplicate_scene_ids() {
+        let yaml = r#"
+start_scene: start
+initial_hp: 10
+scenes:
+  - id: start
+    title: A
+    text: a
+    choices: []
+  - id: start
+    title: B
+    text: b
+    choices: []
+"#;
+        let scenario: Scenario = serde_yaml::from_str(yaml).expect("parse yaml");
+        let err = scenario.validate().unwrap_err();
+        assert!(matches!(
+            err,
+            crate::errors::ValidationError::DuplicateSceneId(_)
+        ));
+    }
+
+    #[test]
+    fn validation_missing_choice_target() {
+        let yaml = r#"
+start_scene: start
+initial_hp: 10
+scenes:
+  - id: start
+    title: A
+    text: a
+    choices:
+      - label: Go
+        next: missing
+"#;
+        let scenario: Scenario = serde_yaml::from_str(yaml).expect("parse yaml");
+        let err = scenario.validate().unwrap_err();
+        assert!(matches!(
+            err,
+            crate::errors::ValidationError::MissingScene(_)
+        ));
+    }
+
+    #[test]
+    fn look_renders_scene_text_and_choices() {
+        let scenario = load_story();
+        let state = GameState::new("entrance".to_string(), scenario.initial_hp);
+        let output = format_scene(&scenario, &state).expect("format scene");
+        assert!(output.contains("Porte Principale"));
+        assert!(output.contains("La pluie frappe les vitres"));
+        assert!(output.contains("1. Entrer dans le hall"));
+        assert!(output.contains("2. Renoncer et partir dans la rue"));
     }
 }

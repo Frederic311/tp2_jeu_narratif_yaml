@@ -66,6 +66,25 @@ impl GameCommand for QuitCommand {
     }
 }
 
+pub struct HelpCommand;
+
+impl GameCommand for HelpCommand {
+    fn execute(
+        &self,
+        _scenario: &Scenario,
+        _state: &mut GameState,
+    ) -> Result<CommandOutcome, GameError> {
+        println!("Commands:");
+        println!("- look: show current scene");
+        println!("- choose <n>: pick an option");
+        println!("- inventory: show items");
+        println!("- status: show HP and scene");
+        println!("- help: show this message");
+        println!("- quit: exit the game");
+        Ok(CommandOutcome::Continue)
+    }
+}
+
 pub struct ChooseCommand {
     pub index: usize,
 }

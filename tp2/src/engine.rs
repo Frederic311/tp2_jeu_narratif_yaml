@@ -29,14 +29,19 @@ pub fn enter_scene(scenario: &Scenario, state: &mut GameState) -> Result<(), Gam
     Ok(())
 }
 
-pub fn render_scene(scenario: &Scenario, state: &GameState) {
-    if let Some(scene) = scenario.scene_by_id(&state.current_scene) {
-        println!("{}", scene.title);
-        println!("{}", scene.text);
-        if !scene.choices.is_empty() {
-            for (index, choice) in scene.choices.iter().enumerate() {
-                println!("{}. {}", index + 1, choice.label);
-            }
+pub fn format_scene(scenario: &Scenario, state: &GameState) -> Option<String> {
+    let scene = scenario.scene_by_id(&state.current_scene)?;
+    let mut lines = vec![scene.title.clone(), scene.text.clone()];
+    if !scene.choices.is_empty() {
+        for (index, choice) in scene.choices.iter().enumerate() {
+            lines.push(format!("{}. {}", index + 1, choice.label));
         }
+    }
+    Some(lines.join("\n"))
+}
+
+pub fn render_scene(scenario: &Scenario, state: &GameState) {
+    if let Some(output) = format_scene(scenario, state) {
+        println!("{output}");
     }
 }

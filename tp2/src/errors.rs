@@ -45,3 +45,20 @@ impl fmt::Display for ValidationError {
         }
     }
 }
+
+#[derive(Debug)]
+pub enum AppError {
+    Io(String),
+    Yaml(String),
+    Validation(ValidationError),
+}
+
+impl fmt::Display for AppError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AppError::Io(message) => write!(f, "I/O error: {message}"),
+            AppError::Yaml(message) => write!(f, "YAML error: {message}"),
+            AppError::Validation(err) => write!(f, "Scenario validation error: {err}"),
+        }
+    }
+}

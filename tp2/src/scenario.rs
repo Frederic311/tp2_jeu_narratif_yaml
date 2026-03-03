@@ -1,4 +1,4 @@
-use crate::errors::ValidationError;
+use crate::errors::{AppError, ValidationError};
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::fs;
@@ -48,9 +48,9 @@ impl Ending {
 }
 
 impl Scenario {
-    pub fn load_from_file(path: &str) -> Result<Self, String> {
-        let content = fs::read_to_string(path).map_err(|e| e.to_string())?;
-        serde_yaml::from_str(&content).map_err(|e| e.to_string())
+    pub fn load_from_file(path: &str) -> Result<Self, AppError> {
+        let content = fs::read_to_string(path).map_err(|e| AppError::Io(e.to_string()))?;
+        serde_yaml::from_str(&content).map_err(|e| AppError::Yaml(e.to_string()))
     }
 
     pub fn validate(&self) -> Result<(), ValidationError> {
